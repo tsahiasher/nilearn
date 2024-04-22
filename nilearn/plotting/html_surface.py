@@ -62,7 +62,7 @@ def get_vertexcolor(surf_map,
     if absolute_threshold is None:
         under_threshold = np.zeros_like(surf_map, dtype=bool)
     else:
-        under_threshold = np.abs(surf_map) < absolute_threshold
+        under_threshold = surf_map < absolute_threshold #np.abs(surf_map) < absolute_threshold
 
     surf_colors = cmap(norm(surf_map).data)
     # set transparency of voxels under threshold to 0
@@ -80,7 +80,7 @@ def get_vertexcolor(surf_map,
 def _one_mesh_info(
         surf_map, surf_mesh, threshold=None, cmap=cm.cold_hot, black_bg=False,
         bg_map=None, symmetric_cmap=True, bg_on_data=False, darkness=.7,
-        vmax=None, vmin=None
+        vmax=None, vmin=None, side='left'
 ):
     """Prepare info for plotting one surface map on a single mesh.
 
@@ -93,15 +93,15 @@ def _one_mesh_info(
     colors = colorscale(
         cmap, surf_map, threshold, symmetric_cmap=symmetric_cmap,
         vmax=vmax, vmin=vmin)
-    info['inflated_left'] = mesh_to_plotly(surf_mesh)
-    info['vertexcolor_left'] = get_vertexcolor(
+    info[f'inflated_{side}'] = mesh_to_plotly(surf_mesh)
+    info[f'vertexcolor_{side}'] = get_vertexcolor(
         surf_map, colors['cmap'], colors['norm'],
         absolute_threshold=colors['abs_threshold'], bg_map=bg_map,
         bg_on_data=bg_on_data, darkness=darkness,
     )
     info["cmin"], info["cmax"] = float(colors['vmin']), float(colors['vmax'])
     info['black_bg'] = black_bg
-    info['full_brain_mesh'] = False
+    info['full_brain_mesh'] = True
     info['colorscale'] = colors['colors']
     return info
 
@@ -109,7 +109,7 @@ def _one_mesh_info(
 def one_mesh_info(
         surf_map, surf_mesh, threshold=None, cmap=cm.cold_hot, black_bg=False,
         bg_map=None, symmetric_cmap=True, bg_on_data=False, darkness=.7,
-        vmax=None, vmin=None,
+        vmax=None, vmin=None, side='left'
 ):
     """Deprecate public function. See _one_mesh_info."""
     warn(
@@ -123,7 +123,7 @@ def one_mesh_info(
                           black_bg=black_bg, bg_map=bg_map,
                           symmetric_cmap=symmetric_cmap,
                           bg_on_data=bg_on_data, darkness=darkness,
-                          vmax=vmax, vmin=vmin)
+                          vmax=vmax, vmin=vmin, side=side)
 
 
 def check_mesh(mesh):
@@ -208,9 +208,9 @@ def full_brain_info(volume_img, mesh='fsaverage5', threshold=None,
     )
 
 
-def _fill_html_template(info, embed_js=True):
+def _fill_html_template(info, embed_js=True, side='left'):
     as_json = json.dumps(info)
-    as_html = get_html_template('surface_plot_template.html').safe_substitute(
+    as_html = get_html_template(f'surface_plot_template_{side}.html').safe_substitute(
         {'INSERT_STAT_MAP_JSON_HERE': as_json,
          'INSERT_PAGE_TITLE_HERE': info["title"] or "Surface plot"})
     as_html = add_js_lib(as_html, embed_js=embed_js)
@@ -223,7 +223,7 @@ def view_img_on_surf(stat_map_img, surf_mesh='fsaverage5',
                      black_bg=False, vmax=None, vmin=None, symmetric_cmap=True,
                      bg_on_data=False, darkness=.7,
                      colorbar=True, colorbar_height=.5, colorbar_fontsize=25,
-                     title=None, title_fontsize=25, vol_to_surf_kwargs={}):
+                     title=None, title_fontsize=25, side='left', vol_to_surf_kwargs={}):
     """Insert a surface plot of a statistical map into an HTML page.
 
     Parameters
@@ -290,6 +290,9 @@ def view_img_on_surf(stat_map_img, surf_mesh='fsaverage5',
     title_fontsize : int, default=25
         Fontsize of the title.
 
+    side : str, hemisphere side (default='left')
+        hemisphere side to display
+
     vol_to_surf_kwargs : dict, optional
         Dictionary of keyword arguments that are passed on to
         :func:`nilearn.surface.vol_to_surf` when extracting a surface from
@@ -324,7 +327,7 @@ def view_img_on_surf(stat_map_img, surf_mesh='fsaverage5',
     info['cbar_fontsize'] = colorbar_fontsize
     info['title'] = title
     info['title_fontsize'] = title_fontsize
-    return _fill_html_template(info, embed_js=True)
+    return _fill_html_template(info, embed_js=True, side=side)
 
 
 @fill_doc
@@ -332,7 +335,7 @@ def view_surf(surf_mesh, surf_map=None, bg_map=None, threshold=None,
               cmap=cm.cold_hot, black_bg=False, vmax=None, vmin=None,
               bg_on_data=False, darkness=.7, symmetric_cmap=True,
               colorbar=True, colorbar_height=.5, colorbar_fontsize=25,
-              title=None, title_fontsize=25):
+              title=None, title_fontsize=25, side='left', return_info=False):
     """Insert a surface plot of a surface map into an HTML page.
 
     Parameters
@@ -411,6 +414,9 @@ def view_surf(surf_mesh, surf_map=None, bg_map=None, threshold=None,
     title_fontsize : int, default=25
         Fontsize of the title.
 
+    side : str, hemisphere side (default='left')
+        hemisphere side to display
+
     Returns
     -------
     SurfaceView : plot of the stat map.
@@ -438,10 +444,109 @@ def view_surf(surf_mesh, surf_map=None, bg_map=None, threshold=None,
         surf_map=surf_map, surf_mesh=surf_mesh, threshold=threshold,
         cmap=cmap, black_bg=black_bg, bg_map=bg_map,
         bg_on_data=bg_on_data, darkness=darkness,
-        symmetric_cmap=symmetric_cmap, vmax=vmax, vmin=vmin)
+        symmetric_cmap=symmetric_cmap, vmax=vmax, vmin=vmin, side=side)
     info['colorbar'] = colorbar
     info['cbar_height'] = colorbar_height
     info['cbar_fontsize'] = colorbar_fontsize
     info['title'] = title
     info['title_fontsize'] = title_fontsize
-    return _fill_html_template(info, embed_js=True)
+    if return_info:
+        return info
+    else:
+        return _fill_html_template(info, embed_js=True, side=side)
+
+
+def _fill_html_template_with_sphere(info, embed_js=True, side='left'):
+    as_json = json.dumps(info)
+    as_html = get_html_template(f'surface_plot_template_with_sphere_{side}.html').safe_substitute(
+        {'INSERT_STAT_MAP_JSON_HERE': as_json,
+         'INSERT_PAGE_TITLE_HERE': info["title"] or "Surface plot"})
+    as_html = add_js_lib(as_html, embed_js=embed_js)
+    return SurfaceView(as_html)
+
+
+def multi_brain_info(surf_map, surf_mesh, threshold=None,
+                     cmap=cm.cold_hot, black_bg=False, bg_map=None, symmetric_cmap=True,
+                     bg_on_data=False, darkness=.7,
+                     vmax=None, vmin=None, side='left'):
+    info = {}
+
+    colors = colorscale(cmap, np.asarray(list(surf_map)).ravel(), threshold, symmetric_cmap=symmetric_cmap, vmax=vmax,
+                        vmin=vmin)
+
+    info[f'pial_{side}'] = mesh_to_plotly(surf_mesh[f'pial_{side}'])
+    info[f'inflated_{side}'] = mesh_to_plotly(surf_mesh[f'infl_{side}'])
+    info[f'sphere_{side}'] = mesh_to_plotly(surf_mesh[f'sphere_{side}'])
+    info[f'vertexcolor_{side}'] = get_vertexcolor(
+        surf_map, colors['cmap'], colors['norm'],
+        absolute_threshold=colors['abs_threshold'], bg_map=bg_map,
+        bg_on_data=bg_on_data, darkness=darkness,
+    )
+
+    info["cmin"], info["cmax"] = float(colors['vmin']), float(colors['vmax'])
+    info['black_bg'] = black_bg
+    info['full_brain_mesh'] = True
+    info['colorscale'] = colors['colors']
+
+    return info
+
+
+def view_multi_surf(surf_mesh, surf_map=None, bg_map=None, threshold=None,
+                    cmap=cm.cold_hot, black_bg=False, vmax=None, vmin=None,
+                    bg_on_data=False, darkness=.7, symmetric_cmap=True,
+                    colorbar=True, colorbar_height=.5, colorbar_fontsize=25,
+                    title=None, title_fontsize=25, side='left', return_info=False):
+
+    info = multi_brain_info(
+        surf_map=surf_map, surf_mesh=surf_mesh, threshold=threshold,
+        cmap=cmap, black_bg=black_bg, bg_map=bg_map,
+        bg_on_data=bg_on_data, darkness=darkness,
+        symmetric_cmap=symmetric_cmap, vmax=vmax, vmin=vmin, side=side)
+    info['colorbar'] = colorbar
+    info['cbar_height'] = colorbar_height
+    info['cbar_fontsize'] = colorbar_fontsize
+    info['title'] = title
+    info['title_fontsize'] = title_fontsize
+    if return_info:
+        return info
+    else:
+        return _fill_html_template_with_sphere(info, embed_js=True, side=side)
+
+
+def add_map(info, surf_map, side, threshold=None, cmap=cm.cold_hot,
+            symmetric_cmap=True, vmax=None, vmin=None, colorbar=False,
+            colorbar_height=.5, colorbar_fontsize=25, return_info=True):
+    colors = colorscale(cmap, np.asarray(list(surf_map)).ravel(), threshold, symmetric_cmap=symmetric_cmap, vmax=vmax,
+                        vmin=vmin)
+
+    vertex_colors = colors['cmap'](colors['norm'](surf_map).data)
+    if colors['abs_threshold'] is not None:
+        vertex_colors[np.abs(surf_map) < colors['abs_threshold']] = 0
+        #vertex_colors[np.abs(surf_map) >= colors['abs_threshold']] = surf_map[np.abs(surf_map) >= colors['abs_threshold']].reshape(-1, 1)
+    
+    mapColorStrings = to_color_strings(vertex_colors)
+
+    for idx, colotString in enumerate(mapColorStrings):
+        if not colotString == '#000000':
+            info[f'vertexcolor_{side}'][idx] = mapColorStrings[idx]
+
+    if colorbar:
+        info['colorbar'] = colorbar
+        info['cbar_height'] = colorbar_height
+        info['cbar_fontsize'] = colorbar_fontsize
+        info['colorscale'] = colors['colors']
+        if info["cmin"] > float(colors['vmin']):
+            info["cmin"] = float(colors['vmin'])
+        if info["cmax"] < float(colors['vmax']):
+            info["cmax"] = float(colors['vmax'])
+        info['full_brain_mesh'] = True
+        info['colorscale'] = colors['colors']
+
+    if return_info:
+        return info
+    else:
+        return _fill_html_template_with_sphere(info, embed_js=True, side=side)
+
+
+def info_to_view(info, side):
+    return _fill_html_template_with_sphere(info, embed_js=True, side=side)

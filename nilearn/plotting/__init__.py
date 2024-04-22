@@ -64,7 +64,7 @@ from .find_cuts import (
 )
 from .html_connectome import view_connectome, view_markers
 from .html_stat_map import view_img
-from .html_surface import view_img_on_surf, view_surf
+from .html_surface import view_img_on_surf, view_surf, view_multi_surf, add_map, info_to_view
 from .img_plotting import (
     plot_anat,
     plot_carpet,
@@ -125,4 +125,7 @@ __all__ = [
     "view_img_on_surf",
     "view_markers",
     "view_surf",
+    "view_multi_surf",
+    "add_map",
+    "info_to_view",
 ]

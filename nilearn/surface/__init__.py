@@ -16,6 +16,7 @@ from .surface import (
     load_surf_mesh,
     load_surface,
     vol_to_surf,
+	_vertex_outer_normals,
 )
 
 __all__ = [

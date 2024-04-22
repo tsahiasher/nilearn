@@ -35,6 +35,24 @@
 
 
 
+nilearn fork for somatoGeometry
+===============================
+
+This nilearn fork was created in order to allow:
+
+- Displaying negative values without symmetrizing the colormap
+
+- Display sphere, inflated and pial surfaces in the same plot
+
+- Allow adding a map to a plot with a different colormap than the one used for the brain
+
+- More camera views
+
+- Open plot with proper side view
+
+- Export _vertex_outer_normals to allow calculation of tangent plane to vertex
+
+
 nilearn
 =======
 

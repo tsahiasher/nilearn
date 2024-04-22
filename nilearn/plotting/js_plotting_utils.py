@@ -71,34 +71,37 @@ def colorscale(cmap, values, threshold=None, symmetric_cmap=True,
                vmax=None, vmin=None):
     """Normalize a cmap, put it in plotly format, get threshold and range."""
     cmap = plt.get_cmap(cmap)
-    abs_values = np.abs(values)
-    if not symmetric_cmap and (values.min() < 0):
-        warnings.warn('you have specified symmetric_cmap=False '
-                      'but the map contains negative values; '
-                      'setting symmetric_cmap to True',
-                      stacklevel=3)
-        symmetric_cmap = True
+
+    if threshold is not None:
+        threshold = check_threshold(threshold, values, fast_abs_percentile)
+
+    abs_values = np.abs(values[values>threshold])
+    # if not symmetric_cmap and (values.min() < 0):
+    #     warnings.warn('you have specified symmetric_cmap=False '
+    #                   'but the map contains negative values; '
+    #                   'setting symmetric_cmap to True',
+    #                   stacklevel=3)
+    #     symmetric_cmap = True
     if symmetric_cmap and vmin is not None:
         warnings.warn('vmin cannot be chosen when cmap is symmetric',
                       stacklevel=3)
         vmin = None
     if vmax is None:
-        vmax = abs_values.max()
+        vmax = np.max(values[values>threshold]) # abs_values.max()
     # cast to float to avoid TypeError if vmax is a numpy boolean
     vmax = float(vmax)
     if symmetric_cmap:
         vmin = - vmax
     if vmin is None:
-        vmin = values.min()
+        vmin = values[values>threshold].min()
     norm = mpl.colors.Normalize(vmin=vmin, vmax=vmax)
     cmaplist = [cmap(i) for i in range(cmap.N)]
-    abs_threshold = None
-    if threshold is not None:
-        abs_threshold = check_threshold(threshold, values, fast_abs_percentile)
-        istart = int(norm(-abs_threshold, clip=True) * (cmap.N - 1))
-        istop = int(norm(abs_threshold, clip=True) * (cmap.N - 1))
-        for i in range(istart, istop):
-            cmaplist[i] = (0.5, 0.5, 0.5, 1.)  # just an average gray color
+    abs_threshold = threshold
+    # if threshold is not None:
+    #     istart = int(norm(-abs_threshold, clip=True) * (cmap.N - 1))
+    #     istop = int(norm(abs_threshold, clip=True) * (cmap.N - 1))
+    #     for i in range(istart, istop):
+    #         cmaplist[i] = (0.5, 0.5, 0.5, 1.)  # just an average gray color
     our_cmap = mpl.colors.LinearSegmentedColormap.from_list(
         'Custom cmap', cmaplist, cmap.N)
     x = np.linspace(0, 1, 100)
